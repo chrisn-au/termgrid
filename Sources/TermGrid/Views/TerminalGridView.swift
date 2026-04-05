@@ -40,24 +40,6 @@ struct TerminalGridView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
-                    var updated = instance
-                    updated.useTmux = !instance.resolvedUseTmux
-                    config.updateInstance(updated)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: instance.resolvedUseTmux ? "rectangle.connected.to.line.below" : "terminal")
-                        Text(instance.resolvedUseTmux ? "tmux" : "shell")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(instance.resolvedUseTmux ? Color.green.opacity(0.2) : Color.clear)
-                            .cornerRadius(4)
-                    }
-                }
-                .help(instance.resolvedUseTmux ? "Using tmux sessions (click for native)" : "Using native shell (click for tmux)")
-            }
-            ToolbarItem(placement: .automatic) {
-                Button {
                     toggleLayoutMode()
                 } label: {
                     Label(
@@ -140,9 +122,9 @@ struct TerminalGridView: View {
                                 directory: instance.directory,
                                 backgroundColor: NSColor(hex: hex),
                                 fontSize: tileFontSize,
-                                tmuxSessionName: tmuxName(suffix: "r\(row)c\(col)")
+                                tmuxSessionName: tmuxNameForSplit(row: row, col: col)
                             )
-                            .id("r\(row)c\(col)-\(instance.resolvedUseTmux)")
+                            .id("r\(row)c\(col)-\(instance.isTmuxForTile(row: row, col: col))")
                             .frame(width: widthFor(col: col, totalWidth: geo.size.width))
                             .contextMenu {
                                 splitTileContextMenu(row: row, col: col, hex: hex, fontSize: tileFontSize)
@@ -266,9 +248,9 @@ struct TerminalGridView: View {
                     directory: instance.directory,
                     backgroundColor: NSColor(hex: hex),
                     fontSize: fs,
-                    tmuxSessionName: tmuxName(suffix: "t\(tabIndex)s\(splitIndex)")
+                    tmuxSessionName: tmuxNameForTab(tabIndex: tabIndex, splitIndex: splitIndex, tab: tab)
                 )
-                .id("t\(tabIndex)s\(splitIndex)-\(instance.resolvedUseTmux)")
+                .id("t\(tabIndex)s\(splitIndex)-\(tab.isTmuxForSplit(splitIndex))")
                 .frame(width: tabSplitWidth(widths: widths, splitIndex: splitIndex, totalWidth: totalWidth, totalSplits: tab.splits))
                 .contextMenu {
                     splitInTabContextMenu(tabIndex: tabIndex, splitIndex: splitIndex, tab: tab)
@@ -330,7 +312,14 @@ struct TerminalGridView: View {
     private func splitInTabContextMenu(tabIndex: Int, splitIndex: Int, tab: TabConfig) -> some View {
         let hex = tab.colorForSplit(splitIndex)
         let fs = tab.fontSizeForSplit(splitIndex, fallback: instance.resolvedFontSize)
+        let isTmux = tab.isTmuxForSplit(splitIndex)
 
+        Button(isTmux ? "Switch to Shell" : "Switch to tmux") {
+            var updated = instance
+            updated.updateTab(at: tabIndex) { $0.setTmuxForSplit(splitIndex, enabled: !isTmux) }
+            config.updateInstance(updated)
+        }
+        Divider()
         Menu("Font Size (\(Int(fs))pt)") {
             ForEach([8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24], id: \.self) { size in
                 Button {
@@ -369,6 +358,13 @@ struct TerminalGridView: View {
 
     @ViewBuilder
     private func splitTileContextMenu(row: Int, col: Int, hex: String, fontSize: CGFloat) -> some View {
+        let isTmux = instance.isTmuxForTile(row: row, col: col)
+        Button(isTmux ? "Switch to Shell" : "Switch to tmux") {
+            var updated = instance
+            updated.setTmuxForTile(row: row, col: col, enabled: !isTmux)
+            config.updateInstance(updated)
+        }
+        Divider()
         Menu("Font Size (\(Int(fontSize))pt)") {
             ForEach([8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24], id: \.self) { size in
                 Button {
@@ -413,10 +409,29 @@ struct TerminalGridView: View {
     }
 
     /// Generate a stable tmux session name for a pane
-    private func tmuxName(suffix: String) -> String? {
-        guard instance.resolvedUseTmux else { return nil }
-        let id8 = String(instance.id.prefix(8))
-        return "tg-\(id8)-\(suffix)"
+    /// Sanitize a string for use as a tmux session name
+    private func tmuxSafe(_ s: String) -> String {
+        s.replacingOccurrences(of: ".", with: "-")
+         .replacingOccurrences(of: ":", with: "-")
+         .replacingOccurrences(of: " ", with: "-")
+    }
+
+    /// Generate tmux session name for a split-mode pane (nil if not tmux)
+    private func tmuxNameForSplit(row: Int, col: Int) -> String? {
+        guard instance.isTmuxForTile(row: row, col: col) else { return nil }
+        let base = "tg-\(tmuxSafe(instance.name))"
+        let total = instance.rows * instance.cols
+        if total == 1 { return base }
+        let index = row * instance.cols + col
+        return index == 0 ? base : "\(base)-\(index + 1)"
+    }
+
+    /// Generate tmux session name for a tab-mode split (nil if not tmux)
+    private func tmuxNameForTab(tabIndex: Int, splitIndex: Int, tab: TabConfig) -> String? {
+        guard tab.isTmuxForSplit(splitIndex) else { return nil }
+        let base = "tg-\(tmuxSafe(instance.name))-\(tmuxSafe(tab.label))"
+        if tab.splits == 1 { return base }
+        return splitIndex == 0 ? base : "\(base)-\(splitIndex + 1)"
     }
 
     // MARK: - Actions

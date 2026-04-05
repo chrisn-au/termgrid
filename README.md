@@ -13,7 +13,7 @@ A native macOS terminal application that organizes multiple terminal sessions in
 - **Tab Management**: Add, rename, and delete tabs; visually distinguish tabs with color indicators
 - **Instance Configuration**: Create multiple independent terminal instances with different working directories and layouts
 - **Templates**: Save instance configurations as templates to quickly clone new instances with identical setups
-- **tmux Integration**: Optional tmux mode per instance — sessions persist across app restarts
+- **Per-Pane tmux**: Each terminal pane can independently run a plain shell or a tmux session — right-click to toggle
 - **Smart Prompt**: Custom shell prompt shows relative path when inside the instance directory, normal path elsewhere
 - **Auto-Restart Shell**: Shells automatically restart when exited, so you never get a dead pane
 - **Directory Selection**: Set different working directories for each instance via file browser
@@ -93,7 +93,6 @@ All config is stored at `~/.config/termgrid/config.json` and auto-saves on every
       "cols": 3,
       "layoutMode": "tabs",
       "fontSize": 12,
-      "useTmux": false,
       "tabs": [
         {
           "label": "Editor",
@@ -103,7 +102,8 @@ All config is stored at `~/.config/termgrid/config.json` and auto-saves on every
         {
           "label": "Build + Test",
           "splits": 2,
-          "colors": ["#0d1b2a", "#0a1f0a"]
+          "colors": ["#0d1b2a", "#0a1f0a"],
+          "tmuxFlags": [true, false]
         }
       ]
     }
@@ -136,12 +136,15 @@ Click the layout toggle button in the toolbar. Switching from split to tabs auto
 
 ## tmux Mode
 
-Toggle tmux on/off per instance via the toolbar button (shows "shell" or "tmux" with a green highlight).
+Each terminal pane can independently run as a plain shell or a tmux session.
 
-- Each terminal pane gets a named tmux session (e.g. `tg-DADD8BF0-t0s0`)
+- **Right-click any pane** and select "Switch to tmux" or "Switch to Shell"
+- One pane can run tmux while the one next to it runs a plain shell
+- tmux sessions get clean names based on instance and tab (e.g. `tg-Gardronia-Claude`)
 - Sessions persist if you close and reopen the window
-- Requires tmux installed (`/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or `/usr/bin/tmux`)
-- Switching modes automatically restarts terminals in the new mode
+- Toggling automatically restarts that pane in the new mode
+- Requires tmux installed (`brew install tmux`)
+- Saved per-pane in config (`tileTmux` for split mode, `tmuxFlags` per tab)
 
 ## Custom Prompt
 

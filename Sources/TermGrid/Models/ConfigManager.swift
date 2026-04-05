@@ -127,7 +127,8 @@ class ConfigManager: ObservableObject {
             tileFontSizes: nil,
             tabs: nil,
             isTemplate: nil,
-            useTmux: nil
+            useTmux: nil,
+            tileTmux: nil
         )
         appConfig.instances.append(newInstance)
         save()

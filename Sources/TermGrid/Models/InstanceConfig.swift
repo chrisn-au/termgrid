@@ -12,6 +12,7 @@ struct TabConfig: Codable, Hashable {
     var colors: [String]?        // per-split background colors
     var fontSizes: [CGFloat]?    // per-split font sizes
     var columnWidths: [CGFloat]? // per-split proportional widths
+    var tmuxFlags: [Bool]?       // per-split tmux enable/disable
 
     func colorForSplit(_ index: Int) -> String {
         if let c = colors, index < c.count, !c[index].isEmpty {
@@ -50,6 +51,19 @@ struct TabConfig: Codable, Hashable {
         columnWidths = widths
     }
 
+    func isTmuxForSplit(_ index: Int) -> Bool {
+        if let flags = tmuxFlags, index < flags.count {
+            return flags[index]
+        }
+        return false
+    }
+
+    mutating func setTmuxForSplit(_ index: Int, enabled: Bool) {
+        if tmuxFlags == nil { tmuxFlags = Array(repeating: false, count: splits) }
+        while tmuxFlags!.count < splits { tmuxFlags!.append(false) }
+        tmuxFlags![index] = enabled
+    }
+
     static func `default`(label: String = "Terminal", splits: Int = 1) -> TabConfig {
         TabConfig(label: label, splits: splits)
     }
@@ -69,7 +83,8 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
     var tileFontSizes: [CGFloat]?    // legacy, migrated to tabs
     var tabs: [TabConfig]?           // per-tab config for tabs mode
     var isTemplate: Bool?             // true = can't be opened, only cloned
-    var useTmux: Bool?
+    var useTmux: Bool?                // legacy instance-wide flag
+    var tileTmux: [Bool]?             // per-tile tmux flags for split mode
 
     var resolvedLayoutMode: LayoutMode {
         layoutMode ?? .split
@@ -142,6 +157,21 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
         tileFontSizes![row * cols + col] = size
     }
 
+    func isTmuxForTile(row: Int, col: Int) -> Bool {
+        let index = row * cols + col
+        if let flags = tileTmux, index < flags.count {
+            return flags[index]
+        }
+        return false
+    }
+
+    mutating func setTmuxForTile(row: Int, col: Int, enabled: Bool) {
+        let total = totalTiles
+        if tileTmux == nil { tileTmux = Array(repeating: false, count: total) }
+        while tileTmux!.count < total { tileTmux!.append(false) }
+        tileTmux![row * cols + col] = enabled
+    }
+
     // MARK: - Tab mutation helpers
 
     mutating func updateTab(at index: Int, _ transform: (inout TabConfig) -> Void) {
@@ -161,6 +191,7 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
         copy.name = name
         copy.isTemplate = nil
         copy.useTmux = useTmux
+        copy.tileTmux = tileTmux
         return copy
     }
 
@@ -185,7 +216,8 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
             tileFontSizes: nil,
             tabs: nil,
             isTemplate: nil,
-            useTmux: nil
+            useTmux: nil,
+            tileTmux: nil
         )
     }
 }
