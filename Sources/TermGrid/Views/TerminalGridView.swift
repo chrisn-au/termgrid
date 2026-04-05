@@ -40,6 +40,24 @@ struct TerminalGridView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
+                    var updated = instance
+                    updated.useTmux = !instance.resolvedUseTmux
+                    config.updateInstance(updated)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: instance.resolvedUseTmux ? "rectangle.connected.to.line.below" : "terminal")
+                        Text(instance.resolvedUseTmux ? "tmux" : "shell")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(instance.resolvedUseTmux ? Color.green.opacity(0.2) : Color.clear)
+                            .cornerRadius(4)
+                    }
+                }
+                .help(instance.resolvedUseTmux ? "Using tmux sessions (click for native)" : "Using native shell (click for tmux)")
+            }
+            ToolbarItem(placement: .automatic) {
+                Button {
                     toggleLayoutMode()
                 } label: {
                     Label(
@@ -121,8 +139,10 @@ struct TerminalGridView: View {
                             TerminalCellView(
                                 directory: instance.directory,
                                 backgroundColor: NSColor(hex: hex),
-                                fontSize: tileFontSize
+                                fontSize: tileFontSize,
+                                tmuxSessionName: tmuxName(suffix: "r\(row)c\(col)")
                             )
+                            .id("r\(row)c\(col)-\(instance.resolvedUseTmux)")
                             .frame(width: widthFor(col: col, totalWidth: geo.size.width))
                             .contextMenu {
                                 splitTileContextMenu(row: row, col: col, hex: hex, fontSize: tileFontSize)
@@ -245,8 +265,10 @@ struct TerminalGridView: View {
                 TerminalCellView(
                     directory: instance.directory,
                     backgroundColor: NSColor(hex: hex),
-                    fontSize: fs
+                    fontSize: fs,
+                    tmuxSessionName: tmuxName(suffix: "t\(tabIndex)s\(splitIndex)")
                 )
+                .id("t\(tabIndex)s\(splitIndex)-\(instance.resolvedUseTmux)")
                 .frame(width: tabSplitWidth(widths: widths, splitIndex: splitIndex, totalWidth: totalWidth, totalSplits: tab.splits))
                 .contextMenu {
                     splitInTabContextMenu(tabIndex: tabIndex, splitIndex: splitIndex, tab: tab)
@@ -388,6 +410,13 @@ struct TerminalGridView: View {
             return tabs[selectedTab].fontSizeForSplit(0, fallback: instance.resolvedFontSize)
         }
         return instance.resolvedFontSize
+    }
+
+    /// Generate a stable tmux session name for a pane
+    private func tmuxName(suffix: String) -> String? {
+        guard instance.resolvedUseTmux else { return nil }
+        let id8 = String(instance.id.prefix(8))
+        return "tg-\(id8)-\(suffix)"
     }
 
     // MARK: - Actions

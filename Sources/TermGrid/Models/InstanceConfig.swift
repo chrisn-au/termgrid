@@ -69,6 +69,7 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
     var tileFontSizes: [CGFloat]?    // legacy, migrated to tabs
     var tabs: [TabConfig]?           // per-tab config for tabs mode
     var isTemplate: Bool?             // true = can't be opened, only cloned
+    var useTmux: Bool?
 
     var resolvedLayoutMode: LayoutMode {
         layoutMode ?? .split
@@ -76,6 +77,10 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
 
     var resolvedFontSize: CGFloat {
         fontSize ?? 11
+    }
+
+    var resolvedUseTmux: Bool {
+        useTmux ?? false
     }
 
     /// Resolve tabs array — migrate from legacy flat model if needed
@@ -155,6 +160,7 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
         copy.id = UUID().uuidString
         copy.name = name
         copy.isTemplate = nil
+        copy.useTmux = useTmux
         return copy
     }
 
@@ -178,7 +184,8 @@ struct InstanceConfig: Identifiable, Codable, Hashable {
             fontSize: nil,
             tileFontSizes: nil,
             tabs: nil,
-            isTemplate: nil
+            isTemplate: nil,
+            useTmux: nil
         )
     }
 }
