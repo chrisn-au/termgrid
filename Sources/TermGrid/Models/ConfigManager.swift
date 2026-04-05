@@ -22,6 +22,67 @@ class ConfigManager: ObservableObject {
             appConfig = .default
             save()
         }
+
+        // Set up custom zsh config for prompt
+        setupZshConfig(configDir: configDir)
+    }
+
+    /// ZDOTDIR path for custom prompt
+    var zshConfigDir: String {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config/termgrid/zsh", isDirectory: true).path
+    }
+
+    private func setupZshConfig(configDir: URL) {
+        let zshDir = configDir.appendingPathComponent("zsh", isDirectory: true)
+        try? FileManager.default.createDirectory(at: zshDir, withIntermediateDirectories: true)
+
+        let zshenv = """
+        # Forward to user's .zshenv
+        [[ -f "$HOME/.zshenv" ]] && source "$HOME/.zshenv"
+        """
+
+        let zprofile = """
+        # Forward to user's .zprofile
+        [[ -f "$HOME/.zprofile" ]] && source "$HOME/.zprofile"
+        """
+
+        let zshrc = """
+        # Forward to user's .zshrc
+        [[ -f "$HOME/.zshrc" ]] && source "$HOME/.zshrc"
+
+        # TermGrid custom prompt
+        if [[ -n "$TERMGRID_DIR" ]]; then
+          autoload -Uz add-zsh-hook
+          _termgrid_set_prompt() {
+            if [[ "$PWD" == "$TERMGRID_DIR"* ]]; then
+              local base="${TERMGRID_DIR##*/}"
+              local rel="${PWD#$TERMGRID_DIR}"
+              PROMPT="%F{cyan}${base}${rel}%f %# "
+            else
+              PROMPT="%F{cyan}%~%f %# "
+            fi
+          }
+          add-zsh-hook precmd _termgrid_set_prompt
+        fi
+        """
+
+        let zlogin = """
+        # Forward to user's .zlogin
+        [[ -f "$HOME/.zlogin" ]] && source "$HOME/.zlogin"
+        """
+
+        let files: [(String, String)] = [
+            (".zshenv", zshenv),
+            (".zprofile", zprofile),
+            (".zshrc", zshrc),
+            (".zlogin", zlogin),
+        ]
+
+        for (name, content) in files {
+            let url = zshDir.appendingPathComponent(name)
+            try? content.write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 
     private func loadConfig() {

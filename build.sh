@@ -11,6 +11,7 @@ mkdir -p "${APP_DIR}/MacOS"
 mkdir -p "${APP_DIR}/Resources"
 
 cp "${BUILD_DIR}/${APP_NAME}" "${APP_DIR}/MacOS/${APP_NAME}"
+cp "Resources/AppIcon.icns" "${APP_DIR}/Resources/AppIcon.icns"
 
 cat > "${APP_DIR}/Info.plist" << 'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -29,6 +30,8 @@ cat > "${APP_DIR}/Info.plist" << 'PLIST'
     <string>TermGrid</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>

@@ -12,10 +12,17 @@ struct TerminalCellView: NSViewRepresentable {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let shellName = "-" + (shell as NSString).lastPathComponent
 
+        // Build environment with ZDOTDIR and TERMGRID_DIR
+        let zshConfigDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config/termgrid/zsh").path
+        var env = Terminal.getEnvironmentVariables(termName: "xterm-256color")
+        env.append("ZDOTDIR=\(zshConfigDir)")
+        env.append("TERMGRID_DIR=\(directory)")
+
         terminalView.startProcess(
             executable: shell,
             args: [],
-            environment: nil,
+            environment: env,
             execName: shellName,
             currentDirectory: directory
         )
